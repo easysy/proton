@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -57,7 +58,18 @@ type Controller struct {
 	isRan   atomic.Bool
 	restart atomic.Bool
 
-	sigint chan os.Signal
+	sigint  chan os.Signal
+	mu      sync.Mutex
+	onStart func(*http.Server)
+}
+
+// OnStart registers a callback function that is executed every time the controller starts or restarts.
+// The provided function `f` receives a pointer to the HTTP server managed by the controller, allowing
+// the user to perform custom initialization or configuration tasks at startup.
+func (c *Controller) OnStart(f func(*http.Server)) {
+	c.mu.Lock()
+	c.onStart = f
+	c.mu.Unlock()
 }
 
 // Start starts the *http.Server.
@@ -110,24 +122,29 @@ func (c *Controller) Shutdown() {
 }
 
 func (c *Controller) start() error {
+	c.isRan.Store(true)
+
 	c.sigint = make(chan os.Signal, 1)
 	signal.Notify(c.sigint, syscall.SIGINT, syscall.SIGTERM)
 
 	defer func() {
+		c.isRan.Store(false)
 		signal.Stop(c.sigint)
 		close(c.sigint)
 	}()
-
-	secure := c.Server.TLSConfig != nil
 
 	go func() {
 		<-c.sigint
 		c.Shutdown()
 	}()
 
-	c.isRan.Store(true)
-	defer c.isRan.Store(false)
+	c.mu.Lock()
+	if c.onStart != nil {
+		c.onStart(c.Server)
+	}
+	c.mu.Unlock()
 
+	secure := c.Server.TLSConfig != nil
 	slog.Info("HTTP server serving", "secure", secure, "address", c.Server.Addr)
 
 	if secure {
