@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -56,8 +57,8 @@ func TestClonePointer(t *testing.T) {
 	})
 }
 
-func TestContainsDuplicates(t *testing.T) {
-	tests := []struct {
+func TestEncounter(t *testing.T) {
+	containsTests := []struct {
 		name string
 		src  []int
 		exp  bool
@@ -72,9 +73,33 @@ func TestContainsDuplicates(t *testing.T) {
 			exp:  true,
 		},
 	}
-	for _, tt := range tests {
+	for _, tt := range containsTests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ContainsDuplicates(tt.src); got != tt.exp {
+			if got := slices.ContainsFunc(tt.src, Encounter(tt.src)); got != tt.exp {
+				t.Fatalf("Test failed, expected %v, got %v", tt.exp, got)
+			}
+		})
+	}
+
+	deleteTests := []struct {
+		name string
+		src  []int
+		exp  []int
+	}{
+		{
+			name: "no deletions",
+			src:  []int{1, 3, 4, 2, 5, 9, 7, 0},
+			exp:  []int{1, 3, 4, 2, 5, 9, 7, 0},
+		},
+		{
+			name: "delete duplicates",
+			src:  []int{1, 3, 4, 2, 5, 9, 7, 9},
+			exp:  []int{1, 3, 4, 2, 5, 9, 7},
+		},
+	}
+	for _, tt := range deleteTests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := slices.DeleteFunc(tt.src, Encounter(tt.src)); slices.Compare(got, tt.exp) != 0 {
 				t.Fatalf("Test failed, expected %v, got %v", tt.exp, got)
 			}
 		})
