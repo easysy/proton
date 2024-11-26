@@ -9,15 +9,13 @@ func ClonePointer[T any](src *T) *T {
 	return dst
 }
 
-func ContainsDuplicates[S ~[]E, E comparable](s S) bool {
+func Encounter[S ~[]E, E comparable](s S) func(E) bool {
 	encountered := make(map[E]bool, len(s))
-
-	for i := range s {
-		if encountered[s[i]] {
+	return func(e E) bool {
+		if encountered[e] {
 			return true
 		}
-		encountered[s[i]] = true
+		encountered[e] = true
+		return false
 	}
-
-	return false
 }
