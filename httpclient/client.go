@@ -27,21 +27,20 @@ func New(coder coder.Coder, client *http.Client) Client {
 // Request sends an HTTP request based on the given method, URL, and optional body, and returns an HTTP response.
 // To add additional data to the request, use the optional function f.
 func (c *protoClient) Request(ctx context.Context, method, url string, body any, f func(*http.Request)) (*http.Response, error) {
-	var reader io.Reader
+	var buf io.ReadWriter
 	if body != nil {
-		buf := new(bytes.Buffer)
+		buf = new(bytes.Buffer)
 		if err := c.Encode(ctx, buf, body); err != nil {
 			return nil, err
 		}
-		reader = buf
 	}
 
-	request, err := http.NewRequestWithContext(ctx, method, url, reader)
+	request, err := http.NewRequestWithContext(ctx, method, url, buf)
 	if err != nil {
 		return nil, err
 	}
 
-	if reader != nil && c.ContentType() != "" {
+	if buf != nil && c.ContentType() != "" {
 		request.Header.Set(coder.ContentType, c.ContentType())
 	}
 
