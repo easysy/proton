@@ -13,7 +13,7 @@ import (
 type Client interface {
 	coder.Coder
 	Request(ctx context.Context, method, url string, body any, f func(*http.Request)) (*http.Response, error)
-	SendFile(ctx context.Context, url, key, filename string, body io.ReadSeeker, f func(*http.Request)) (*http.Response, error)
+	SendFile(ctx context.Context, url, key, filename string, body io.Reader, f func(*http.Request)) (*http.Response, error)
 }
 
 type protoClient struct {
@@ -57,7 +57,7 @@ func (c *protoClient) Request(ctx context.Context, method, url string, body any,
 // To add additional data to the request, use the optional function f (e.g., for adding headers).
 //   - key: the form field name for the file;
 //   - name: the name of the file being uploaded.
-func (c *protoClient) SendFile(ctx context.Context, url, key, name string, body io.ReadSeeker, f func(*http.Request)) (*http.Response, error) {
+func (c *protoClient) SendFile(ctx context.Context, url, key, name string, body io.Reader, f func(*http.Request)) (*http.Response, error) {
 	// Create a buffer for the multipart form
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
