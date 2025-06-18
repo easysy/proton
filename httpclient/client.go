@@ -12,7 +12,15 @@ import (
 
 type Client interface {
 	coder.Coder
+	// Do delegates directly to the underlying http.Client.Do.
+	Do(req *http.Request) (*http.Response, error)
+	// Request sends an HTTP request based on the given method, URL, and optional body, and returns an HTTP response.
+	// To add additional data to the request, use the optional function f (e.g., for adding headers).
 	Request(ctx context.Context, method, url string, body any, f func(*http.Request)) (*http.Response, error)
+	// SendFile sends a file as a multipart form upload via an HTTP POST request based on the given URL, key, name and body.
+	// To add additional data to the request, use the optional function f (e.g., for adding headers).
+	//   - key: the form field name for the file;
+	//   - name: the name of the file being uploaded.
 	SendFile(ctx context.Context, url, key, filename string, body io.Reader, f func(*http.Request)) (*http.Response, error)
 }
 
@@ -26,8 +34,10 @@ func New(coder coder.Coder, client *http.Client) Client {
 	return &protoClient{Coder: coder, Client: client}
 }
 
-// Request sends an HTTP request based on the given method, URL, and optional body, and returns an HTTP response.
-// To add additional data to the request, use the optional function f (e.g., for adding headers).
+func (c *protoClient) Do(req *http.Request) (*http.Response, error) {
+	return c.Client.Do(req)
+}
+
 func (c *protoClient) Request(ctx context.Context, method, url string, body any, f func(*http.Request)) (*http.Response, error) {
 	var buf io.ReadWriter
 	if body != nil {
@@ -53,10 +63,6 @@ func (c *protoClient) Request(ctx context.Context, method, url string, body any,
 	return c.Do(request)
 }
 
-// SendFile sends a file as a multipart form upload via an HTTP POST request based on the given URL, key, name and body.
-// To add additional data to the request, use the optional function f (e.g., for adding headers).
-//   - key: the form field name for the file;
-//   - name: the name of the file being uploaded.
 func (c *protoClient) SendFile(ctx context.Context, url, key, name string, body io.Reader, f func(*http.Request)) (*http.Response, error) {
 	// Create a buffer for the multipart form
 	var buf bytes.Buffer

@@ -9,6 +9,10 @@ func ClonePointer[T any](src *T) *T {
 	return dst
 }
 
+func TakePointer[T any](v T) *T {
+	return &v
+}
+
 func Encounter[S ~[]E, E comparable](s S) func(E) bool {
 	encountered := make(map[E]bool, len(s))
 	return func(e E) bool {

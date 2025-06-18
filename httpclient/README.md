@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal, false)
+	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal)
 
 	clientJSON := httpclient.New(cdrJSON, http.DefaultClient)
 
@@ -68,7 +68,7 @@ import (
 )
 
 func main() {
-	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal, false)
+	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal)
 
 	clientJSON := httpclient.New(cdrJSON, http.DefaultClient)
 
@@ -115,7 +115,7 @@ import (
 func main() {
 	transport := httpclient.RoundTripperSequencer(
 		http.DefaultTransport,
-		httpclient.DumpHttp(slog.LevelDebug),
+		httpclient.DumpHttp(slog.LevelDebug, 1024),
 		httpclient.Timer(slog.LevelInfo),
 		httpclient.Tracer,
 		httpclient.PanicCatcher,

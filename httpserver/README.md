@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal, false)
+	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal)
 
 	fmtJSON := httpserver.NewFormatter(cdrJSON)
 
@@ -132,7 +132,7 @@ func main() {
 
 	handler := httpserver.MiddlewareSequencer(
 		http.DefaultServeMux,
-		httpserver.DumpHttp(slog.LevelDebug),
+		httpserver.DumpHttp(slog.LevelDebug, 1024),
 		httpserver.Timer(slog.LevelInfo),
 		httpserver.Tracer,
 		httpserver.AllowCORS(corsOpts),

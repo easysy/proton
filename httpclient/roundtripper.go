@@ -77,19 +77,19 @@ func PanicCatcher(next http.RoundTripper) http.RoundTripper {
 }
 
 // DumpHttp dumps the HTTP request and response, and prints out with logFunc.
-func DumpHttp(level slog.Level) func(http.RoundTripper) http.RoundTripper {
+func DumpHttp(level slog.Level, maxBody int64) func(http.RoundTripper) http.RoundTripper {
 	return func(next http.RoundTripper) http.RoundTripper {
 		return RoundTripper(func(r *http.Request) (*http.Response, error) {
 			ctx := r.Context()
 			if slog.Default().Enabled(ctx, level) {
-				log.DumpHttpRequest(ctx, r, level)
+				log.DumpHttpRequest(ctx, r, level, maxBody)
 
 				response, err := next.RoundTrip(r)
 				if err != nil {
 					return nil, err
 				}
 
-				log.DumpHttpResponse(ctx, response, level)
+				log.DumpHttpResponse(ctx, response, level, maxBody)
 
 				return response, nil
 			}
