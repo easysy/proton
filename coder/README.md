@@ -23,7 +23,7 @@ import (
 func main() {
 	ctx := context.Background()
 
-	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal, false)
+	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal)
 
 	var buf bytes.Buffer
 

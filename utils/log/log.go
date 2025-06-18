@@ -1,6 +1,7 @@
 package log
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"log/slog"
@@ -13,24 +14,12 @@ type contextKey int
 const (
 	TraceCtxKey contextKey = iota + 1
 
-	maxBody     int64 = 1 << 14 // 16KiB
-	traceLogKey       = "trace_id"
+	traceLogKey = "trace_id"
 )
 
 var (
-	body     = maxBody
 	traceKey = traceLogKey
 )
-
-// SetMaxBodyLen sets the maximum body length for HTTP request/response dumping.
-// The default limit is 16KiB.
-// If a positive length is provided, and it is less than the default, it updates the limit to the specified value.
-func SetMaxBodyLen(length int64) {
-	body = maxBody
-	if length > 0 && length < maxBody {
-		body = length
-	}
-}
 
 // SetTraceKey sets the key used to store trace IDs in log records.
 // If a non-empty key is provided, it overrides the default trace key ("trace_id").
@@ -57,28 +46,70 @@ func (h TraceHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
-// DumpHttpRequest dumps the HTTP request and prints out.
-func DumpHttpRequest(ctx context.Context, r *http.Request, level slog.Level) {
+// DumpHttpRequest logs the full HTTP request using slog at the specified log level.
+// It uses DumpRequestOut for client requests or DumpRequest for server requests,
+// and includes the body if its size is less than maxBody.
+func DumpHttpRequest(ctx context.Context, r *http.Request, level slog.Level, maxBody int64) {
 	dumpFunc := httputil.DumpRequestOut
 	if r.URL.Scheme == "" || r.URL.Host == "" {
 		dumpFunc = httputil.DumpRequest
 	}
-	b, err := dumpFunc(r, r.ContentLength < body)
+
+	b, err := dumpFunc(r, r.ContentLength < maxBody)
 	if err != nil {
 		slog.ErrorContext(ctx, "HTTP REQUEST", "error", err)
 		return
 	}
+
+	if r.Body != nil && maxBody > 0 {
+		var lBody []byte
+		if r.Body, lBody, err = bodyReader(r.Body, maxBody); err != nil {
+			slog.ErrorContext(ctx, "HTTP REQUEST", "error", err)
+			return
+		}
+		b = append(b, lBody...)
+	}
+
 	slog.Log(ctx, level, "HTTP REQUEST", "dump", string(b))
 }
 
-// DumpHttpResponse dumps the HTTP response and prints out.
-func DumpHttpResponse(ctx context.Context, r *http.Response, level slog.Level) {
-	b, err := httputil.DumpResponse(r, r.ContentLength < body)
+// DumpHttpResponse logs the full HTTP response using slog at the specified log level.
+// It includes the body if its size is less than maxBody.
+func DumpHttpResponse(ctx context.Context, r *http.Response, level slog.Level, maxBody int64) {
+	b, err := httputil.DumpResponse(r, r.ContentLength < maxBody)
 	if err != nil {
 		slog.ErrorContext(ctx, "HTTP RESPONSE", "error", err)
 		return
 	}
+
+	if r.Body != nil && maxBody > 0 {
+		var limitedCopy []byte
+		if r.Body, limitedCopy, err = bodyReader(r.Body, maxBody); err != nil {
+			slog.ErrorContext(ctx, "HTTP RESPONSE", "error", err)
+			return
+		}
+		b = append(b, limitedCopy...)
+	}
+
 	slog.Log(ctx, level, "HTTP RESPONSE", "dump", string(b))
+}
+
+func bodyReader(body io.ReadCloser, limit int64) (io.ReadCloser, []byte, error) {
+	defer Closer(nil, body)
+
+	fullCopy, limitedCopy := new(bytes.Buffer), new(bytes.Buffer)
+	limitReader := io.TeeReader(io.LimitReader(body, limit), limitedCopy)
+
+	n, err := io.Copy(fullCopy, io.MultiReader(limitReader, body))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if n > limit {
+		limitedCopy.WriteString("...\n--- the body is limited due to size limit ---")
+	}
+
+	return io.NopCloser(fullCopy), limitedCopy.Bytes(), nil
 }
 
 // Closer calls the Close method, if the closure occurred with an error, it prints out.

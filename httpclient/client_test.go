@@ -18,7 +18,7 @@ func equal(t *testing.T, exp, got any) {
 	}
 }
 
-var cdrJSON = coder.NewCoder("application/json", json.Marshal, json.Unmarshal, false)
+var cdrJSON = coder.NewCoder("application/json", json.Marshal, json.Unmarshal)
 
 type serverTestStruct struct {
 	Field int

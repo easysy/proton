@@ -1,7 +1,9 @@
-# proton
+# Proton
 
 ![https://img.shields.io/github/v/tag/easysy/proton](https://img.shields.io/github/v/tag/easysy/proton)
 ![https://img.shields.io/github/license/easysy/proton](https://img.shields.io/github/license/easysy/proton)
+
+## Overview
 
 `proton` is a tool library for HTTP client-server services.
 
@@ -15,6 +17,6 @@
 
 `proton` can be installed like any other Go library through `go get`:
 
-```console
-go get github.com/easysy/proton@latest
+```sh
+  go get github.com/easysy/proton@latest
 ```
