@@ -22,7 +22,7 @@ type encoder struct {
 
 // NewEncoder returns a new Encoder that writes to w.
 func NewEncoder(marshal func(v any) ([]byte, error), opts ...Options) Encoder {
-	enc := &encoder{f: marshal}
+	enc := &encoder{f: marshal, lvl: slog.LevelDebug}
 	for _, o := range opts {
 		o.applyEnc(enc)
 	}
@@ -73,7 +73,7 @@ type decoder struct {
 
 // NewDecoder returns a new Decoder that reads from r.
 func NewDecoder(unmarshal func(data []byte, v any) error, opts ...Options) Decoder {
-	dec := &decoder{f: unmarshal}
+	dec := &decoder{f: unmarshal, lvl: slog.LevelDebug}
 	for _, o := range opts {
 		o.applyDec(dec)
 	}
