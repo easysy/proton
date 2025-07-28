@@ -22,7 +22,7 @@ type testStruct struct {
 }
 
 func TestEncoder_Encode(t *testing.T) {
-	encoder := coder.NewEncoder(json.Marshal, false)
+	encoder := coder.NewEncoder(json.Marshal)
 	var tests = []struct {
 		name   string
 		input  *testStruct
@@ -51,7 +51,7 @@ func TestEncoder_Encode(t *testing.T) {
 }
 
 func TestDecoder_Decode(t *testing.T) {
-	decoder := coder.NewDecoder(json.Unmarshal, false)
+	decoder := coder.NewDecoder(json.Unmarshal)
 	var tests = []struct {
 		name   string
 		input  []byte

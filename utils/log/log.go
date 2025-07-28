@@ -14,6 +14,7 @@ type contextKey int
 const (
 	TraceCtxKey contextKey = iota + 1
 
+	maxBody     = 1 << 14 // 16KiB
 	traceLogKey = "trace_id"
 )
 
@@ -47,15 +48,16 @@ func (h TraceHandler) Handle(ctx context.Context, r slog.Record) error {
 }
 
 // DumpHttpRequest logs the full HTTP request using slog at the specified log level.
-// It uses DumpRequestOut for client requests or DumpRequest for server requests,
-// and includes the body if its size is less than maxBody.
+// It uses DumpRequestOut for client requests and DumpRequest for server requests.
+// If the request has a body and maxBody is greater than 0, it logs up to maxBody bytes of the body,
+// but never more than 16 KiB.
 func DumpHttpRequest(ctx context.Context, r *http.Request, level slog.Level, maxBody int64) {
 	dumpFunc := httputil.DumpRequestOut
 	if r.URL.Scheme == "" || r.URL.Host == "" {
 		dumpFunc = httputil.DumpRequest
 	}
 
-	b, err := dumpFunc(r, r.ContentLength < maxBody)
+	b, err := dumpFunc(r, false)
 	if err != nil {
 		slog.ErrorContext(ctx, "HTTP REQUEST", "error", err)
 		return
@@ -74,9 +76,10 @@ func DumpHttpRequest(ctx context.Context, r *http.Request, level slog.Level, max
 }
 
 // DumpHttpResponse logs the full HTTP response using slog at the specified log level.
-// It includes the body if its size is less than maxBody.
+// If the response has a body and maxBody is greater than 0, it logs up to maxBody bytes of the body,
+// but never more than 16 KiB.
 func DumpHttpResponse(ctx context.Context, r *http.Response, level slog.Level, maxBody int64) {
-	b, err := httputil.DumpResponse(r, r.ContentLength < maxBody)
+	b, err := httputil.DumpResponse(r, false)
 	if err != nil {
 		slog.ErrorContext(ctx, "HTTP RESPONSE", "error", err)
 		return
@@ -96,6 +99,10 @@ func DumpHttpResponse(ctx context.Context, r *http.Response, level slog.Level, m
 
 func bodyReader(body io.ReadCloser, limit int64) (io.ReadCloser, []byte, error) {
 	defer Closer(nil, body)
+
+	if limit > maxBody {
+		limit = maxBody
+	}
 
 	fullCopy, limitedCopy := new(bytes.Buffer), new(bytes.Buffer)
 	limitReader := io.TeeReader(io.LimitReader(body, limit), limitedCopy)
