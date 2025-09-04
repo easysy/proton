@@ -38,6 +38,21 @@ type CORSOptions struct {
 	// AllowPrivateNetwork indicates whether requests from private network contexts
 	// are allowed (controlled via the "Private-Network" CORS extension header).
 	AllowPrivateNetwork bool
+
+	// SkipStrictOriginCheck controls how requests without a valid Origin header are handled.
+	//
+	// By default, (false), requests missing an allowed Origin are rejected, ensuring strict
+	// cross-origin enforcement for both preflight (OPTIONS) and non-preflight requests.
+	//
+	// If set to true, non-preflight requests (e.g., GET, POST) that do not include an
+	// Origin header are allowed to pass through to the next handler. This is useful for:
+	//
+	//   - Same-origin requests (browsers often omit the Origin header)
+	//   - Non-browser clients (curl, Go http.Client, etc.) that do not set Origin
+	//
+	// Security note: Setting this to true means requests without Origin are trusted.
+	// You should only enable it if your API must support same-origin or non-browser clients.
+	SkipStrictOriginCheck bool
 }
 
 type cors struct {
@@ -50,6 +65,7 @@ type cors struct {
 	maxAge                  int
 	isCredentialsAllowed    bool
 	isPrivateNetworkAllowed bool
+	skipStrictOriginCheck   bool
 }
 
 func makeAllowed(allowed []string, c func(string) string) map[string]struct{} {
@@ -81,6 +97,7 @@ func newCORS(opts *CORSOptions) *cors {
 		maxAge:                  opts.MaxAge,
 		isCredentialsAllowed:    opts.AllowCredentials,
 		isPrivateNetworkAllowed: opts.AllowPrivateNetwork,
+		skipStrictOriginCheck:   opts.SkipStrictOriginCheck,
 	}
 
 	allowOrigins := makeAllowed(opts.AllowOrigins, func(s string) string { return s })
@@ -138,8 +155,18 @@ func AllowCORS(opts *CORSOptions) func(next http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			origin := c.isOriginAllowed(r.Header.Get("Origin"))
-			if origin == "" || (r.Method == http.MethodOptions && !c.isAllowed(r)) {
+			originHeader := r.Header.Get("Origin")
+
+			origin := c.isOriginAllowed(originHeader)
+			if origin == "" {
+				if r.Method != http.MethodOptions && c.skipStrictOriginCheck && originHeader == "" {
+					next.ServeHTTP(w, r)
+				}
+
+				return
+			}
+
+			if r.Method == http.MethodOptions && !c.isAllowed(r) {
 				return
 			}
 
