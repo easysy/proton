@@ -7,8 +7,8 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/easysy/proton/utils/log"
-	"github.com/easysy/proton/utils/sgen"
+	"github.com/easysy/proton/log"
+	"github.com/easysy/proton/sgen"
 )
 
 func init() {

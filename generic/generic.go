@@ -1,4 +1,4 @@
-package utils
+package generic
 
 func ClonePointer[T any](src *T) *T {
 	if src == nil {
@@ -22,4 +22,19 @@ func Encounter[S ~[]E, E comparable](s S) func(E) bool {
 		encountered[e] = true
 		return false
 	}
+}
+
+func GetFromMap[K comparable, T any](m map[K]any, k K) (T, bool) {
+	var t T
+
+	if m == nil {
+		return t, false
+	}
+
+	v, ok := m[k]
+	if ok && v != nil {
+		t, ok = v.(T)
+	}
+
+	return t, ok
 }

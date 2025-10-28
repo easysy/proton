@@ -9,13 +9,13 @@ import (
 )
 
 var (
-	FSIsEmpty           = errors.New("the embedded file system is empty")
-	CertFilePathIsEmpty = errors.New("the path to the certificate file is empty")
-	KeyFilePathIsEmpty  = errors.New("the path to the key file is empty")
-	CertPEMBlockIsEmpty = errors.New("PEM certificate block is empty")
-	KeyPEMBlockIsEmpty  = errors.New("PEM key block is empty")
-	NoValid             = errors.New("no valid certificate")
-	AppendCertFailed    = errors.New("failed to add CA's certificate")
+	ErrFSIsEmpty           = errors.New("the embedded file system is empty")
+	ErrCertFilePathIsEmpty = errors.New("the path to the certificate file is empty")
+	ErrKeyFilePathIsEmpty  = errors.New("the path to the key file is empty")
+	ErrCertPEMBlockIsEmpty = errors.New("PEM certificate block is empty")
+	ErrKeyPEMBlockIsEmpty  = errors.New("PEM key block is empty")
+	ErrNoValid             = errors.New("no valid certificate")
+	ErrAppendCertFailed    = errors.New("failed to add CA's certificate")
 )
 
 type CertificatesLoader func() ([]tls.Certificate, *x509.CertPool, error)
@@ -29,6 +29,7 @@ func ServerTLSConfig(loader CertificatesLoader) (*tls.Config, error) {
 	return &tls.Config{
 		Certificates: certificates,
 		ClientCAs:    certPool,
+		MinVersion:   tls.VersionTLS13,
 	}, nil
 }
 
@@ -41,6 +42,7 @@ func ClientTLSConfig(loader CertificatesLoader) (*tls.Config, error) {
 	return &tls.Config{
 		Certificates: certificates,
 		RootCAs:      certPool,
+		MinVersion:   tls.VersionTLS13,
 	}, nil
 }
 
@@ -68,22 +70,22 @@ func certValidate(certificate *tls.Certificate) error {
 		}
 	}
 
-	return NoValid
+	return ErrNoValid
 }
 
 // LoadFromEmbed loads []tls.Certificate from a pair of files stored in *embed.FS.
 // To use this function you must specify EmbedFS, CertFilePath, KeyFilePath in the Loader.
 func (l *Loader) LoadFromEmbed() ([]tls.Certificate, *x509.CertPool, error) {
 	if l.EmbedFS == nil {
-		return nil, nil, FSIsEmpty
+		return nil, nil, ErrFSIsEmpty
 	}
 
 	if l.CertFilePath == "" {
-		return nil, nil, CertFilePathIsEmpty
+		return nil, nil, ErrCertFilePathIsEmpty
 	}
 
 	if l.KeyFilePath == "" {
-		return nil, nil, KeyFilePathIsEmpty
+		return nil, nil, ErrKeyFilePathIsEmpty
 	}
 
 	var err error
@@ -114,11 +116,11 @@ func (l *Loader) LoadFromEmbed() ([]tls.Certificate, *x509.CertPool, error) {
 // To use this function you must specify CertFilePath, KeyFilePath in the Loader.
 func (l *Loader) LoadFromFiles() ([]tls.Certificate, *x509.CertPool, error) {
 	if l.CertFilePath == "" {
-		return nil, nil, CertFilePathIsEmpty
+		return nil, nil, ErrCertFilePathIsEmpty
 	}
 
 	if l.KeyFilePath == "" {
-		return nil, nil, KeyFilePathIsEmpty
+		return nil, nil, ErrKeyFilePathIsEmpty
 	}
 
 	certificate, err := tls.LoadX509KeyPair(l.CertFilePath, l.KeyFilePath)
@@ -137,11 +139,11 @@ func (l *Loader) LoadFromFiles() ([]tls.Certificate, *x509.CertPool, error) {
 // To use this function you must specify CertPEMBlock, KeyPEMBlock in the Loader.
 func (l *Loader) LoadFromBytes() ([]tls.Certificate, *x509.CertPool, error) {
 	if len(l.CertPEMBlock) == 0 {
-		return nil, nil, CertPEMBlockIsEmpty
+		return nil, nil, ErrCertPEMBlockIsEmpty
 	}
 
 	if len(l.KeyPEMBlock) == 0 {
-		return nil, nil, KeyPEMBlockIsEmpty
+		return nil, nil, ErrKeyPEMBlockIsEmpty
 	}
 
 	certificate, err := tls.X509KeyPair(l.CertPEMBlock, l.KeyPEMBlock)
