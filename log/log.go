@@ -65,7 +65,7 @@ func DumpHttpRequest(ctx context.Context, r *http.Request, level slog.Level, max
 
 	if r.Body != nil && maxBody > 0 {
 		var lBody []byte
-		if r.Body, lBody, err = bodyReader(r.Body, maxBody); err != nil {
+		if r.Body, lBody, err = bodyReader(ctx, r.Body, maxBody); err != nil {
 			slog.ErrorContext(ctx, "HTTP REQUEST", "error", err)
 			return
 		}
@@ -87,7 +87,7 @@ func DumpHttpResponse(ctx context.Context, r *http.Response, level slog.Level, m
 
 	if r.Body != nil && maxBody > 0 {
 		var limitedCopy []byte
-		if r.Body, limitedCopy, err = bodyReader(r.Body, maxBody); err != nil {
+		if r.Body, limitedCopy, err = bodyReader(ctx, r.Body, maxBody); err != nil {
 			slog.ErrorContext(ctx, "HTTP RESPONSE", "error", err)
 			return
 		}
@@ -97,8 +97,8 @@ func DumpHttpResponse(ctx context.Context, r *http.Response, level slog.Level, m
 	slog.Log(ctx, level, "HTTP RESPONSE", "dump", string(b))
 }
 
-func bodyReader(body io.ReadCloser, limit int64) (io.ReadCloser, []byte, error) {
-	defer Closer(nil, body)
+func bodyReader(ctx context.Context, body io.ReadCloser, limit int64) (io.ReadCloser, []byte, error) {
+	defer Closer(ctx, body)
 
 	if limit > maxBody {
 		limit = maxBody

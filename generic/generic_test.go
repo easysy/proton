@@ -1,4 +1,4 @@
-package utils
+package generic
 
 import (
 	"slices"
@@ -103,5 +103,60 @@ func TestEncounter(t *testing.T) {
 				t.Fatalf("Test failed, expected %v, got %v", tt.exp, got)
 			}
 		})
+	}
+}
+
+func TestGetFromMap(t *testing.T) {
+	src1 := map[string]any{
+		"one":   1,
+		"two":   "2",
+		"three": TakePointer("3"),
+		"four":  nil,
+	}
+
+	if got, ok := GetFromMap[string, int](src1, "one"); got != 1 || !ok {
+		t.Fatalf("Test failed, expected %v, got %v, ok: %v", 1, got, ok)
+	}
+
+	if got, ok := GetFromMap[string, string](src1, "two"); got != "2" || !ok {
+		t.Fatalf("Test failed, expected %v, got %v, ok: %v", "2", got, ok)
+	}
+
+	if got, ok := GetFromMap[string, string](src1, "one"); got != "" || ok {
+		t.Fatalf("Test failed, expected empty string, got %v, ok: %v", got, ok)
+	}
+
+	if got, ok := GetFromMap[string, *string](src1, "three"); !ok || *got != "3" {
+		t.Fatalf("Test failed, expected %v, got %v, ok: %v", "3", got, ok)
+	}
+
+	if got, ok := GetFromMap[string, *int](src1, "three"); ok || got != nil {
+		t.Fatalf("Test failed, expected nil, got %v, ok: %v", got, ok)
+	}
+
+	src2 := map[int]any{
+		1: 1,
+		2: "2",
+		3: TakePointer(3),
+	}
+
+	if got, ok := GetFromMap[int, int](src2, 1); !ok || got != 1 {
+		t.Fatalf("Test failed, expected %v, got %v, ok: %v", 1, got, ok)
+	}
+
+	if got, ok := GetFromMap[int, string](src2, 2); !ok || got != "2" {
+		t.Fatalf("Test failed, expected %v, got %v, ok: %v", "2", got, ok)
+	}
+
+	if got, ok := GetFromMap[int, string](src2, 1); ok || got != "" {
+		t.Fatalf("Test failed, expected empty string, got %v, ok: %v", got, ok)
+	}
+
+	if got, ok := GetFromMap[int, *int](src2, 3); !ok || *got != 3 {
+		t.Fatalf("Test failed, expected %v, got %v, ok: %v", 3, got, ok)
+	}
+
+	if got, ok := GetFromMap[int, *string](src2, 3); ok || got != nil {
+		t.Fatalf("Test failed, expected nil, got %v, ok: %v", got, ok)
 	}
 }

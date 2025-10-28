@@ -15,7 +15,7 @@ import (
 
 	"github.com/easysy/proton/coder"
 	"github.com/easysy/proton/httpclient"
-	"github.com/easysy/proton/utils/log"
+	"github.com/easysy/proton/log"
 )
 
 func main() {
@@ -34,8 +34,8 @@ func main() {
 		r.URL.RawQuery = params.Encode()
 	}
 
-		ctx := context.Background()
-	
+	ctx := context.Background()
+
 	resp, err := clientJSON.Request(ctx, http.MethodGet, URL, nil, f)
 	if err != nil {
 		panic(err)
@@ -64,7 +64,7 @@ import (
 
 	"github.com/easysy/proton/coder"
 	"github.com/easysy/proton/httpclient"
-	"github.com/easysy/proton/utils/log"
+	"github.com/easysy/proton/log"
 )
 
 func main() {
@@ -79,7 +79,7 @@ func main() {
 	}{ID: 1}
 
 	ctx := context.Background()
-	
+
 	resp, err := clientJSON.Request(ctx, http.MethodPost, URL, req, nil)
 	if err != nil {
 		panic(err)

@@ -1,9 +1,9 @@
 package sgen
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"math/big"
 	"strings"
-	"time"
 )
 
 var (
@@ -12,11 +12,6 @@ var (
 	LowLetters characterSet = []rune("abcdefghijklmnopqrstuvwxyz")
 )
 
-func init() {
-	rand.New(rand.NewSource(time.Now().UnixNano()))
-}
-
-// characterSet a set of characters to generate a random string.
 type characterSet []rune
 
 func (cs characterSet) Append(sets ...[]rune) []rune {
@@ -42,20 +37,23 @@ type RandomString struct {
 	length       int
 }
 
-// Configure sets configuration for generates random string.
+// Configure sets configuration for generating random strings.
 func (s *RandomString) Configure(prefix string, charSet []rune, randLength int) {
 	s.prefix = prefix
 	s.characterSet = charSet
 	s.length = len(prefix) + randLength
 }
 
-// Generate generates random string according to configuration.
+// Generate generates a cryptographically secure random string.
 func (s *RandomString) Generate() string {
 	b := new(strings.Builder)
 	b.Grow(s.length)
-	b.WriteString(s.prefix)
+	_, _ = b.WriteString(s.prefix)
+
 	for n := len(s.prefix); n < s.length; n++ {
-		b.WriteRune(s.characterSet[rand.Intn(len(s.characterSet))])
+		r, _ := rand.Int(rand.Reader, big.NewInt(int64(len(s.characterSet))))
+		_, _ = b.WriteRune(s.characterSet[r.Int64()])
 	}
+
 	return b.String()
 }
