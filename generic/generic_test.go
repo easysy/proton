@@ -106,7 +106,7 @@ func TestEncounter(t *testing.T) {
 	}
 }
 
-func TestGetFromMap(t *testing.T) {
+func TestMapGetValue(t *testing.T) {
 	src1 := map[string]any{
 		"one":   1,
 		"two":   "2",
@@ -114,23 +114,23 @@ func TestGetFromMap(t *testing.T) {
 		"four":  nil,
 	}
 
-	if got, ok := GetFromMap[string, int](src1, "one"); got != 1 || !ok {
+	if got, ok := MapGetValue[string, int](src1, "one"); got != 1 || !ok {
 		t.Fatalf("Test failed, expected %v, got %v, ok: %v", 1, got, ok)
 	}
 
-	if got, ok := GetFromMap[string, string](src1, "two"); got != "2" || !ok {
+	if got, ok := MapGetValue[string, string](src1, "two"); got != "2" || !ok {
 		t.Fatalf("Test failed, expected %v, got %v, ok: %v", "2", got, ok)
 	}
 
-	if got, ok := GetFromMap[string, string](src1, "one"); got != "" || ok {
+	if got, ok := MapGetValue[string, string](src1, "one"); got != "" || ok {
 		t.Fatalf("Test failed, expected empty string, got %v, ok: %v", got, ok)
 	}
 
-	if got, ok := GetFromMap[string, *string](src1, "three"); !ok || *got != "3" {
+	if got, ok := MapGetValue[string, *string](src1, "three"); !ok || *got != "3" {
 		t.Fatalf("Test failed, expected %v, got %v, ok: %v", "3", got, ok)
 	}
 
-	if got, ok := GetFromMap[string, *int](src1, "three"); ok || got != nil {
+	if got, ok := MapGetValue[string, *int](src1, "three"); ok || got != nil {
 		t.Fatalf("Test failed, expected nil, got %v, ok: %v", got, ok)
 	}
 
@@ -140,23 +140,23 @@ func TestGetFromMap(t *testing.T) {
 		3: TakePointer(3),
 	}
 
-	if got, ok := GetFromMap[int, int](src2, 1); !ok || got != 1 {
+	if got, ok := MapGetValue[int, int](src2, 1); !ok || got != 1 {
 		t.Fatalf("Test failed, expected %v, got %v, ok: %v", 1, got, ok)
 	}
 
-	if got, ok := GetFromMap[int, string](src2, 2); !ok || got != "2" {
+	if got, ok := MapGetValue[int, string](src2, 2); !ok || got != "2" {
 		t.Fatalf("Test failed, expected %v, got %v, ok: %v", "2", got, ok)
 	}
 
-	if got, ok := GetFromMap[int, string](src2, 1); ok || got != "" {
+	if got, ok := MapGetValue[int, string](src2, 1); ok || got != "" {
 		t.Fatalf("Test failed, expected empty string, got %v, ok: %v", got, ok)
 	}
 
-	if got, ok := GetFromMap[int, *int](src2, 3); !ok || *got != 3 {
+	if got, ok := MapGetValue[int, *int](src2, 3); !ok || *got != 3 {
 		t.Fatalf("Test failed, expected %v, got %v, ok: %v", 3, got, ok)
 	}
 
-	if got, ok := GetFromMap[int, *string](src2, 3); ok || got != nil {
+	if got, ok := MapGetValue[int, *string](src2, 3); ok || got != nil {
 		t.Fatalf("Test failed, expected nil, got %v, ok: %v", got, ok)
 	}
 }

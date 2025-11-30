@@ -24,17 +24,14 @@ func Encounter[S ~[]E, E comparable](s S) func(E) bool {
 	}
 }
 
-func GetFromMap[K comparable, T any](m map[K]any, k K) (T, bool) {
-	var t T
-
-	if m == nil {
-		return t, false
+func MapGetValue[K comparable, V any](m map[K]any, k K) (v V, ok bool) {
+	if m != nil {
+		v, ok = m[k].(V)
 	}
+	return
+}
 
-	v, ok := m[k]
-	if ok && v != nil {
-		t, ok = v.(T)
-	}
-
-	return t, ok
+func MapGetValueSilent[K comparable, T any](m map[K]any, k K) T {
+	t, _ := MapGetValue[K, T](m, k)
+	return t
 }
