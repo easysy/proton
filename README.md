@@ -13,9 +13,7 @@
 - [httpclient](https://github.com/easysy/proton/blob/main/httpclient/README.md)
 - [httpserver](https://github.com/easysy/proton/blob/main/httpserver/README.md)
 
-## Installation
-
-`proton` can be installed like any other Go library through `go get`:
+## 📦 Installation
 
 ```sh
   go get github.com/easysy/proton@latest
