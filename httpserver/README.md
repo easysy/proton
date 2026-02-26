@@ -132,7 +132,7 @@ func main() {
 
 	handler := httpserver.MiddlewareSequencer(
 		http.DefaultServeMux,
-		httpserver.DumpHttp(slog.LevelDebug, 1024),
+		httpserver.DumpHttp(slog.LevelDebug, true),
 		httpserver.Timer(slog.LevelInfo),
 		httpserver.Tracer,
 		httpserver.AllowCORS(corsOpts),
