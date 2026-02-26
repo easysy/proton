@@ -85,7 +85,7 @@ func TestProtoFormatter_WriteResponse(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			fmtJSON := httpserver.NewFormatter(cdrJSON)
 
-			srv := httptest.NewServer(httpserver.DumpHttp(slog.LevelDebug, 1024)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			srv := httptest.NewServer(httpserver.DumpHttp(slog.LevelDebug, true)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				equal(t, r.URL.String(), "/path")
 
 				ctx := r.Context()

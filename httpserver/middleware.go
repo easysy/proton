@@ -71,12 +71,12 @@ func PanicCatcher(next http.Handler) http.Handler {
 }
 
 // DumpHttp dumps the HTTP request and response, and prints out.
-func DumpHttp(level slog.Level, maxBody int64) func(http.Handler) http.Handler {
+func DumpHttp(level slog.Level, body bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			if slog.Default().Enabled(ctx, level) {
-				log.DumpHttpRequest(ctx, r, level, maxBody)
+				log.DumpHttpRequest(ctx, r, level, body)
 
 				recorder := httptest.NewRecorder()
 
@@ -94,7 +94,7 @@ func DumpHttp(level slog.Level, maxBody int64) func(http.Handler) http.Handler {
 				response := recorder.Result()
 				response.ContentLength, _ = recorder.Body.WriteTo(w)
 
-				log.DumpHttpResponse(ctx, response, level, maxBody)
+				log.DumpHttpResponse(ctx, response, level, body)
 
 				return
 			}

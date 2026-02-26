@@ -115,7 +115,7 @@ import (
 func main() {
 	transport := httpclient.RoundTripperSequencer(
 		http.DefaultTransport,
-		httpclient.DumpHttp(slog.LevelDebug, 1024),
+		httpclient.DumpHttp(slog.LevelDebug, true),
 		httpclient.Timer(slog.LevelInfo),
 		httpclient.Tracer,
 		httpclient.PanicCatcher,

@@ -1,21 +1,21 @@
 package log
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"log/slog"
+	"mime"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 )
 
 type contextKey int
 
 const (
 	TraceCtxKey contextKey = iota + 1
-
-	maxBody     = 1 << 14 // 16KiB
-	traceLogKey = "trace_id"
+	traceLogKey            = "trace_id"
+	holder                 = "<binary body>\r\n"
 )
 
 var (
@@ -24,6 +24,7 @@ var (
 
 // SetTraceKey sets the key used to store trace IDs in log records.
 // If a non-empty key is provided, it overrides the default trace key ("trace_id").
+// It must be called before any concurrent use of DumpHttpRequest or DumpHttpResponse.
 func SetTraceKey(key string) {
 	traceKey = traceLogKey
 	if key != "" {
@@ -47,79 +48,123 @@ func (h TraceHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
+var types = map[string]struct{}{
+	"json":                  {},
+	"ld+json":               {},
+	"problem+json":          {},
+	"xml":                   {},
+	"atom+xml":              {},
+	"problem+xml":           {},
+	"rss+xml":               {},
+	"soap+xml":              {},
+	"xhtml+xml":             {},
+	"graphql":               {},
+	"javascript":            {},
+	"x-javascript":          {},
+	"x-www-form-urlencoded": {},
+}
+
+// SetHumanReadableSubTypes overrides the list of application/* subtypes whose bodies are logged as text.
+// It must be called before any concurrent use of DumpHttpRequest or DumpHttpResponse.
+func SetHumanReadableSubTypes(list []string) {
+	if len(list) == 0 {
+		return
+	}
+	types = make(map[string]struct{}, len(list))
+	for _, t := range list {
+		types[t] = struct{}{}
+	}
+}
+
 // DumpHttpRequest logs the full HTTP request using slog at the specified log level.
 // It uses DumpRequestOut for client requests and DumpRequest for server requests.
-// If the request has a body and maxBody is greater than 0, it logs up to maxBody bytes of the body,
-// but never more than 16 KiB.
-func DumpHttpRequest(ctx context.Context, r *http.Request, level slog.Level, maxBody int64) {
+// If body is true and the Content-Type is human-readable, the body is included in the dump.
+// If the body is binary, a placeholder is appended instead.
+func DumpHttpRequest(ctx context.Context, r *http.Request, level slog.Level, body bool) {
 	dumpFunc := httputil.DumpRequestOut
 	if r.URL.Scheme == "" || r.URL.Host == "" {
 		dumpFunc = httputil.DumpRequest
 	}
 
-	b, err := dumpFunc(r, false)
+	var binary bool
+
+	if body && r.Body != nil && r.Body != http.NoBody {
+		if body = isHumanReadable(r.Header.Get("Content-Type")); !body {
+			binary = true
+		}
+	}
+
+	b, err := dumpFunc(r, body)
 	if err != nil {
 		slog.ErrorContext(ctx, "HTTP REQUEST", "error", err)
 		return
 	}
 
-	if r.Body != nil && maxBody > 0 {
-		var lBody []byte
-		if r.Body, lBody, err = bodyReader(ctx, r.Body, maxBody); err != nil {
-			slog.ErrorContext(ctx, "HTTP REQUEST", "error", err)
-			return
-		}
-		b = append(b, lBody...)
+	if binary {
+		buf := make([]byte, len(b)+len(holder))
+		n := copy(buf, b)
+		copy(buf[n:], holder)
+		b = buf
 	}
 
 	slog.Log(ctx, level, "HTTP REQUEST", "dump", string(b))
 }
 
 // DumpHttpResponse logs the full HTTP response using slog at the specified log level.
-// If the response has a body and maxBody is greater than 0, it logs up to maxBody bytes of the body,
-// but never more than 16 KiB.
-func DumpHttpResponse(ctx context.Context, r *http.Response, level slog.Level, maxBody int64) {
-	b, err := httputil.DumpResponse(r, false)
+// If body is true and the Content-Type is human-readable, the body is included in the dump.
+// If the body is binary, a placeholder is appended instead.
+func DumpHttpResponse(ctx context.Context, r *http.Response, level slog.Level, body bool) {
+	var binary bool
+
+	if body && r.Body != nil && r.Body != http.NoBody {
+		if body = isHumanReadable(r.Header.Get("Content-Type")); !body {
+			binary = true
+		}
+	}
+
+	b, err := httputil.DumpResponse(r, body)
 	if err != nil {
 		slog.ErrorContext(ctx, "HTTP RESPONSE", "error", err)
 		return
 	}
 
-	if r.Body != nil && maxBody > 0 {
-		var limitedCopy []byte
-		if r.Body, limitedCopy, err = bodyReader(ctx, r.Body, maxBody); err != nil {
-			slog.ErrorContext(ctx, "HTTP RESPONSE", "error", err)
-			return
-		}
-		b = append(b, limitedCopy...)
+	if binary {
+		buf := make([]byte, len(b)+len(holder))
+		n := copy(buf, b)
+		copy(buf[n:], holder)
+		b = buf
 	}
 
 	slog.Log(ctx, level, "HTTP RESPONSE", "dump", string(b))
 }
 
-func bodyReader(ctx context.Context, body io.ReadCloser, limit int64) (io.ReadCloser, []byte, error) {
-	defer Closer(ctx, body)
-
-	if limit > maxBody {
-		limit = maxBody
+// isHumanReadable reports whether the given Content-Type indicates text that is safe to log.
+// Binary content (images, archives, octet-streams, multipart file uploads, audio/video, etc.) returns false.
+func isHumanReadable(contentType string) bool {
+	if contentType == "" {
+		return false
 	}
 
-	fullCopy, limitedCopy := new(bytes.Buffer), new(bytes.Buffer)
-	limitReader := io.TeeReader(io.LimitReader(body, limit), limitedCopy)
-
-	n, err := io.Copy(fullCopy, io.MultiReader(limitReader, body))
+	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
-		return nil, nil, err
+		return false
 	}
 
-	if n > limit {
-		limitedCopy.WriteString("...\n--- the body is limited due to size limit ---")
+	mainType, subType, _ := strings.Cut(mediaType, "/")
+
+	if mainType == "text" {
+		return true
 	}
 
-	return io.NopCloser(fullCopy), limitedCopy.Bytes(), nil
+	if mainType != "application" {
+		return false
+	}
+
+	_, ok := types[subType]
+	return ok
 }
 
-// Closer calls the Close method, if the closure occurred with an error, it prints out.
+// Closer calls the Close method and logs any error via slog.
 func Closer(ctx context.Context, c io.Closer) {
 	if err := c.Close(); err != nil {
 		slog.ErrorContext(ctx, "close resource", "error", err)

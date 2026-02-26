@@ -34,10 +34,6 @@ func New(coder coder.Coder, client *http.Client) Client {
 	return &protoClient{Coder: coder, Client: client}
 }
 
-func (c *protoClient) Do(req *http.Request) (*http.Response, error) {
-	return c.Client.Do(req)
-}
-
 func (c *protoClient) Request(ctx context.Context, method, url string, body any, f func(*http.Request)) (*http.Response, error) {
 	var buf io.ReadWriter
 	if body != nil {
