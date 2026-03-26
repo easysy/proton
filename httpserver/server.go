@@ -150,10 +150,10 @@ func (c *Controller) start() error {
 	if secure {
 		err := c.Server.ListenAndServeTLS("", "")
 		return fmt.Errorf("HTTP server ListenAndServeTLS: %w", err)
-	} else {
-		err := c.Server.ListenAndServe()
-		return fmt.Errorf("HTTP server ListenAndServe: %w", err)
 	}
+
+	err := c.Server.ListenAndServe()
+	return fmt.Errorf("HTTP server ListenAndServe: %w", err)
 }
 
 // clone clones the server before restarting, since it is impossible to start a stopped server.
