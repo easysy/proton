@@ -61,6 +61,10 @@ type Controller struct {
 	sigint  chan os.Signal
 	mu      sync.Mutex
 	onStart func(*http.Server)
+
+	ctxOnce sync.Once
+	ctx     context.Context
+	cancel  context.CancelFunc
 }
 
 // OnStart registers a callback function that is executed every time the controller starts or restarts.
@@ -72,6 +76,17 @@ func (c *Controller) OnStart(f func(*http.Server)) {
 	c.mu.Unlock()
 }
 
+// Context returns a context.Context that is canceled once the controller has fully shut down — i.e.
+// Start has returned for good and will not restart. Safe to call before Start().
+func (c *Controller) Context() context.Context {
+	c.ctxOnce.Do(c.initContext)
+	return c.ctx
+}
+
+func (c *Controller) initContext() {
+	c.ctx, c.cancel = context.WithCancel(context.Background())
+}
+
 // Start starts the *http.Server.
 // If *tls.Config on the server is non nil, the server listens and serves using tls.
 func (c *Controller) Start() (err error) {
@@ -81,6 +96,8 @@ func (c *Controller) Start() (err error) {
 		}
 		if !c.restart.Load() {
 			slog.Info("HTTP server is shutdown")
+			c.ctxOnce.Do(c.initContext)
+			c.cancel()
 			return
 		} else if err != nil {
 			slog.Error(err.Error())
